@@ -261,7 +261,7 @@ static void UpdateTriangleInspectData(double x0, double y0, double x1, double y1
     data->centroid_y = (y0 + y1 + y2) / 3.0;
 }
 
-void RunMainWindow()
+static void RenderTriangleWindow()
 {
     static float radius = 25.f;
     ImGui::SliderFloat("Angle Distance", &radius, 0.f, 100.f, "%.3f%%");
@@ -284,17 +284,23 @@ void RunMainWindow()
         { 4.0, 1.0 }
     };
 
-    ImGui::InputDouble("x0", &mypoints[0][0]);
-    ImGui::InputDouble("y0", &mypoints[0][1]);
+    static struct TriangleInspectData data;
+    static bool wants_data_update = true;
+
+    wants_data_update = ImGui::InputDouble("x0", &mypoints[0][0]) || wants_data_update;
+    wants_data_update = ImGui::InputDouble("y0", &mypoints[0][1]) || wants_data_update;
     
-    ImGui::InputDouble("x1", &mypoints[1][0]);
-    ImGui::InputDouble("y1", &mypoints[1][1]);
+    wants_data_update = ImGui::InputDouble("x1", &mypoints[1][0]) || wants_data_update;
+    wants_data_update = ImGui::InputDouble("y1", &mypoints[1][1]) || wants_data_update;
 
-    ImGui::InputDouble("x2", &mypoints[2][0]);
-    ImGui::InputDouble("y2", &mypoints[2][1]);
+    wants_data_update = ImGui::InputDouble("x2", &mypoints[2][0]) || wants_data_update;
+    wants_data_update = ImGui::InputDouble("y2", &mypoints[2][1]) || wants_data_update;
 
-    struct TriangleInspectData data;
-    UpdateTriangleInspectData(mypoints[0][0], mypoints[0][1], mypoints[1][0], mypoints[1][1], mypoints[2][0], mypoints[2][1], &data);
+    if (wants_data_update)
+    {
+        UpdateTriangleInspectData(mypoints[0][0], mypoints[0][1], mypoints[1][0], mypoints[1][1], mypoints[2][0], mypoints[2][1], &data);
+        wants_data_update = false;
+    }
 
     if (ImPlot::BeginPlot("My plot"))
     {
@@ -430,7 +436,10 @@ void RunMainWindow()
         ImPlot::PlotLine("##TriangleSides", data.plot_x, data.plot_y, 3, ImPlotLineFlags_Loop);
 
         for (int i = 0; i < 3; i++)
-            ImPlot::DragPoint(i, &mypoints[i][0], &mypoints[i][1], ImGui::GetStyleColorVec4(ImGuiCol_Text));
+        {
+            if (ImPlot::DragPoint(i, &mypoints[i][0], &mypoints[i][1], ImGui::GetStyleColorVec4(ImGuiCol_Text)))
+                wants_data_update = true;
+        }
 
         if (show_medians)
         {
@@ -554,4 +563,24 @@ void RunMainWindow()
     ImGui::TextDisabled("Median Lengths:");
     for (int i = 0; i < 3; i++)
         ImGui::Text("|%cM%i| = %g", 'A' + i, i, data.median_lengths[i]);
+}
+
+void RunMainWindow()
+{
+    if (ImGui::BeginTabBar("##TabBar"))
+    {
+        if (ImGui::BeginTabItem("Triangle Inspection"))
+        {
+            RenderTriangleWindow();
+            ImGui::EndTabItem();
+        }
+        
+        if (ImGui::BeginTabItem("Calculations"))
+        {
+            ImGui::TextUnformatted("Not implemented yet!");
+            ImGui::EndTabItem();
+        }
+
+        ImGui::EndTabBar();
+    }
 }
